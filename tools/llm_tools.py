@@ -2,7 +2,6 @@ from __future__ import annotations
 import json
 from typing import Any, Optional
 from langchain_core.messages import SystemMessage, HumanMessage
-from DB.init_db import build_schema_context_from_db
 from store.SessionStore import session_store
 from RAG.schema_context import  compact_for_prompt
 from LLM.make_llm import make_llm
@@ -14,10 +13,9 @@ from langchain_core.messages import AIMessage
 from datetime import date, datetime
 from decimal import Decimal
 from API.config import settings
-from LLM.select_relevant_schema_with_llm import select_relevant_schema_with_llm
-from typing import Annotated
-from langchain_core.tools import tool, InjectedToolArg
+from langchain_core.tools import tool
 from typing import Any, Dict
+from RAG.rag_service import build_schema_context_via_ragdb,ingest_sql_history,search_sql_history,RagDBServiceError
 
 
 import logging
@@ -235,39 +233,45 @@ async def db_query_chain(
     # 1) Analyze
     analysis = await analyze_query(llm, user_text)
     logger.info("analyzed query was executed")
-    # # 2) Build schema context from Chroma using metadata
-    # chroma = get_chroma()
-    # schema_full = build_schema_context(chroma, analysis)
-    # if not schema_full.get("tables"):
-    #     return _json({
-    #         "mode": "db_query_chain",
-    #         "ok": False,
-    #         "error": "No relevant tables found in schema RAG for this request.",
-    #         "analysis": analysis,
-    #     })
-    #
-    # schema_for_prompt = compact_for_prompt(schema_full)
-    # 2) Build schema context from DB (no Chroma)
-    schema_full = build_schema_context_from_db(settings.DATABASE_URL)
-    logger.info("analyzed query was executed")
-    if not schema_full.get("tables"):
-        return _json({
-            "mode": "db_query_chain",
-            "ok": False,
-            "error": "No tables found in database schema.",
-            "analysis": analysis,
-        })
 
-    schema_selected = await select_relevant_schema_with_llm(llm, analysis, schema_full)
+
+    schema_full = build_schema_context_via_ragdb(
+        analysis,
+        base_url=settings.RAGDB_URL)
+
+
+    schema_for_prompt = compact_for_prompt(schema_full)
     logger.info("llm has selected relevant schemas")
-    schema_for_prompt = compact_for_prompt(schema_selected)
+    schema_for_prompt1 = schema_for_prompt
+    try:
+        history_matches = await search_sql_history(
+            base_url=settings.RAGDB_URL,
+            db_fingerprint="prod_main",
+            user_query=user_text,
+            tables_filter=list(schema_full.get("tables", {}).keys()),
+            top_k=3,
+            timeout_s=5.0,
+        )
 
+        if history_matches:
+            examples_block = "\n\n=== Successfully executed similar queries ===\n"
 
-    # 3) Execute with retries (generate/fix inside)
+            for i, m in enumerate(history_matches, 1):
+                examples_block += (
+                    f"\nExample {i}:\n"
+                    f"User: {m['user_query']}\n"
+                    f"SQL:\n{m['sql']}\n"
+                )
+
+            schema_for_prompt1["user_history"] = examples_block
+
+    except Exception:
+        logger.exception("Failed to retrieve SQL history (non-fatal).")
+
     exec_res = await execute_with_retries(
         llm=llm,
         user_text=user_text,
-        schema_context=schema_for_prompt,
+        schema_context=schema_for_prompt1,
         max_attempts=max_attempts,
     )
     logger.info("llm tryes to execute sql")
@@ -281,6 +285,20 @@ async def db_query_chain(
             "sql",
             [AIMessage(content=exec_res.get("sql"))]
         )
+        tables_used = ["public.FlightSchedules"]
+        try:
+            await ingest_sql_history(
+                base_url=settings.RAGDB_URL,
+                db_fingerprint="prod_main",
+                user_query=user_text,
+                executed_sql=exec_res.get("sql"),
+                tables_used=tables_used,
+                duration_ms=3,
+                rows_count=3,
+                timeout_s=10.0,
+            )
+        except RagDBServiceError:
+            logger.exception("Failed to ingest SQL history (non-fatal).")
 
     payload = {
         "mode": "db_query_chain",

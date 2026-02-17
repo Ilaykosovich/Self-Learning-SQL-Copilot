@@ -18,9 +18,14 @@ class Settings(BaseSettings):
     DEFAULT_TEMPERATURE: float = 0.6
     OLLAMA_BASE_URL: str = "http://127.0.0.1:11434"
 
+    # RAG SERVICE
+    RAGDB_URL: str = "http://127.0.0.1:9000"
+
     # App
     APP_NAME: str = "LLM Orchestrator"
     ENV: str = "dev"
+
+
 
     model_config = SettingsConfigDict(
         env_file=".env",

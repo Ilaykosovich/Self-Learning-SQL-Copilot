@@ -8,7 +8,7 @@ Return STRICT JSON only:
   "intent": "schedule | list | aggregation | stats | detail | comparison | unknown",
   "entities": [
     {
-      "type": "airline | airport | flight | date | code | generic",
+      "type": "entity | attribute | identifier | temporal | metric | filter_value | table",
       "value": "...",
       "aliases": ["...", "..."],
       "confidence": 0.0-1.0
@@ -35,8 +35,6 @@ Return STRICT JSON only:
 Rules:
 - Generate 1 search_queries.
 - search_queries must be short, schema-oriented, and include
-  possible column or table names (e.g. airline, carrier, iata, code,
-  departure, arrival, schedule, timetable, status).
-- If a code like 'SU', 'U6', 'S7' appears, extract it as an entity.
+  possible column or table names.
 - No markdown. No comments. JSON only.
 """

@@ -53,7 +53,7 @@ the LLM does not rely on manually provided schema descriptions. Instead, the sys
 ## Architecture Overview
 
 <p align="center">
-  <img src="images/Memory-Augmented" width="900" />
+  <img src="images/Memory-Augmented.drawio.svg" width="900" />
   <img src="images/main_page.png" width="900" />
   <img src="images/generated_sql.png" width="900" />
 </p>

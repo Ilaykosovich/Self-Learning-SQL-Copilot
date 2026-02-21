@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, List, Tuple, Optional, Literal
+from typing import Dict, List, Tuple, Optional, Literal, Any
 from uuid import uuid4
 
 from pydantic import BaseModel
@@ -14,6 +14,7 @@ class SessionStore:
         self._db: Dict[Tuple[str, str], List[BaseMessage]] = {}
         # порядок создания "сессий" (на самом деле пар (session_id, message_key))
         self._order: List[Tuple[str, str]] = []
+        self._state: Dict[Tuple[str, str], Dict[str, Any]] = {}
 
     def _make_session_id(self) -> str:
         return uuid4().hex

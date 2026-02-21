@@ -134,7 +134,37 @@ async def show_last_sql() -> str:
         return _json({"mode": "show_last_sql", "ok": False, "message": "No SQL generated yet."})
     return _json({"mode": "show_last_sql", "ok": True, "sql": last_sql})
 
+@tool("save_last_sql")
+async def save_last_successful_sql() -> str:
 
+    """
+     Use this tool WHEN the user asks to:
+      - to save last SQL
+    Returns last generated SQL for this session (if any).
+    And send it to the RAG service to save.
+    """
+    session_id = current_session_id.get()
+    last_sql = _session_get(session_id, "last_sql")
+    user_text =  _session_get(session_id, "user_text")
+    tables_used = ["public.FlightSchedules"]
+    try:
+        await ingest_sql_history(
+            base_url=settings.RAGDB_URL,
+            db_fingerprint="prod_main",
+            user_query=user_text,
+            executed_sql=last_sql,
+            tables_used=tables_used,
+            duration_ms=3,
+            rows_count=3,
+            timeout_s=10.0,
+        )
+    except RagDBServiceError:
+        logger.exception("Failed to ingest SQL history (non-fatal).")
+
+
+    if not last_sql:
+        return _json({"mode": "show_last_sql", "ok": False, "message": "No SQL generated yet."})
+    return _json({"mode": "show_last_sql", "ok": True, "sql": last_sql})
 
 
 @tool("db_healthcheck")
@@ -278,6 +308,7 @@ async def db_query_chain(
     # Persist last SQL for show_last_sql tool
     if exec_res.get("ok") and exec_res.get("sql"):
         _session_set(session_id, "last_sql", exec_res["sql"])
+        _session_set(session_id, "user_text", user_text)
         _session_set(session_id, "last_rows_preview", exec_res.get("rows_preview", []))
         logger.info("llm has selected relevant schemas")
         session_store.append_messages(
@@ -285,20 +316,7 @@ async def db_query_chain(
             "sql",
             [AIMessage(content=exec_res.get("sql"))]
         )
-        tables_used = ["public.FlightSchedules"]
-        try:
-            await ingest_sql_history(
-                base_url=settings.RAGDB_URL,
-                db_fingerprint="prod_main",
-                user_query=user_text,
-                executed_sql=exec_res.get("sql"),
-                tables_used=tables_used,
-                duration_ms=3,
-                rows_count=3,
-                timeout_s=10.0,
-            )
-        except RagDBServiceError:
-            logger.exception("Failed to ingest SQL history (non-fatal).")
+
 
     payload = {
         "mode": "db_query_chain",
@@ -345,4 +363,5 @@ TOOLS = [
     show_last_sql,
     db_healthcheck_tool,
     set_db_profile,
+    save_last_successful_sql,
 ]

@@ -27,6 +27,7 @@ async def chat(req: ChatRequest, request: Request):
         []
     )
     token = current_session_id.set(session_id)
+
     try:
         result = await AGENT_EXECUTOR.ainvoke(
             {"input": user_text, "chat_history": history},

@@ -14,7 +14,30 @@ class SessionStore:
         self._db: Dict[Tuple[str, str], List[BaseMessage]] = {}
         # порядок создания "сессий" (на самом деле пар (session_id, message_key))
         self._order: List[Tuple[str, str]] = []
-        self._state: Dict[Tuple[str, str], Dict[str, Any]] = {}
+        self._state: Dict[str, Dict[str, Any]] = {}
+
+    def get_state(
+            self,
+            session_id: str,
+            key: str,
+            default: Any = None,
+    ) -> Any:
+        session_key = str(session_id)
+        if session_key in self._state:
+            return self._state[session_key].get(key, default)
+        return None
+
+    def set_state(
+            self,
+            session_id: str,
+            key: str,
+            value: Any,
+    ) -> None:
+        session_key = str(session_id)
+
+        if session_key not in self._state:
+            self._state[session_key] = {}
+        self._state[session_key][key] = value
 
     def _make_session_id(self) -> str:
         return uuid4().hex

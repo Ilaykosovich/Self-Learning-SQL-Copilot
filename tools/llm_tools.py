@@ -134,12 +134,14 @@ async def show_last_sql() -> str:
         return _json({"mode": "show_last_sql", "ok": False, "message": "No SQL generated yet."})
     return _json({"mode": "show_last_sql", "ok": True, "sql": last_sql})
 
+
+
 @tool("save_last_sql")
 async def save_last_successful_sql() -> str:
 
     """
      Use this tool WHEN the user asks to:
-      - to save last SQL
+      - to save last successful SQL
     Returns last generated SQL for this session (if any).
     And send it to the RAG service to save.
     """

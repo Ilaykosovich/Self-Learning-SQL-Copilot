@@ -1,9 +1,10 @@
-# Text-to-SQL Copilot  
-*(Part 1 — without RAG)*
+# Self-Learning SQL Copilot
 
 ## How to start the project with Docker
 
 This is the recommended way to run the project.
+I write the atticle where I more curiosly describe my project: 
+https://medium.com/@ilaykosovich/text-to-sql-designing-an-adaptive-ai-agent-part-2-0a364e7cc550
 
 ### 1. Create environment configuration
 
@@ -14,20 +15,23 @@ cp .env.example .env
 
 ### 2. Build the Docker image
 
-From the project root directory, run: docker build -t text-to-sql-copilot .
+From the project root directory, run: docker build -t self-learning-sql-copilot
 
 ### 3. Run the container
-docker run -p 8000:8000 --env-file .env text-to-sql-copilot
+docker run -p 8000:8000 --env-file .env self-learning-sql-copilot
 
 
 The service will be available at:
 
 http://localhost:8000
 
+### 3. Download RAG service and repair it. 
 
+I can find the project on this link: https://github.com/Ilaykosovich/RagDbService
+On this project you repair connection to your database.
 🚧 **Status:** Work in progress
 
-Text-to-SQL Copilot is a system that allows users to query relational databases using **natural language**, without requiring any knowledge of SQL or the underlying database schema.
+Self-Learning SQL Copilot is a system that allows users to query relational databases using **natural language**, without requiring any knowledge of SQL or the underlying database schema.
 
 The system behaves like a conversational LLM assistant.  
 When a user request requires database access, the agent automatically switches into **SQL generation mode**, executes the query, and returns the result.

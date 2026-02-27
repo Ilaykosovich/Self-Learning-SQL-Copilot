@@ -1,60 +1,72 @@
 # Self-Learning SQL Copilot
 
-## How to start the project with Docker
+A conversational, schema-adaptive AI system that lets users work with relational databases using **natural language**, without any prior knowledge of SQL or the underlying schema.
 
-This is the recommended way to run the project.
-I write the atticle where I more curiosly describe my project: 
-https://medium.com/@ilaykosovich/text-to-sql-designing-an-adaptive-ai-agent-part-2-0a364e7cc550
+**Detailed project description and design:**  
+[Text-to-SQL: Designing an Adaptive AI Agent (Medium)](https://medium.com/@ilaykosovich/text-to-sql-designing-an-adaptive-ai-agent-part-2-0a364e7cc550)
 
-### 1. Create environment configuration
+---
 
-Create a `.env` file based on the provided template:
+## Getting Started (Docker Recommended)
 
+### 1. Environment Configuration
 
+Copy the example environment file:
+
+```bash
 cp .env.example .env
+```
 
-### 2. Build the Docker image
+Edit `.env` as needed.
 
-From the project root directory, run: docker build -t self-learning-sql-copilot
+### 2. Build Docker Image
 
-### 3. Run the container
+From the project root:
+
+```bash
+docker build -t self-learning-sql-copilot .
+```
+
+### 3. Run the Container
+
+```bash
 docker run -p 8000:8000 --env-file .env self-learning-sql-copilot
+```
 
-
-The service will be available at:
-
-http://localhost:8000
-
-### 3. Download RAG service and repair it. 
-
-I can find the project on this link: https://github.com/Ilaykosovich/RagDbService
-On this project you repair connection to your database.
-🚧 **Status:** Work in progress
-
-Self-Learning SQL Copilot is a system that allows users to query relational databases using **natural language**, without requiring any knowledge of SQL or the underlying database schema.
-
-The system behaves like a conversational LLM assistant.  
-When a user request requires database access, the agent automatically switches into **SQL generation mode**, executes the query, and returns the result.
-
-A key design principle of this project is **schema-awareness without schema prompting**:  
-the LLM does not rely on manually provided schema descriptions. Instead, the system dynamically retrieves database schema metadata and uses it during query generation.
+The service will be available at [http://localhost:8000](http://localhost:8000)
 
 ---
 
-## Key features
+### 4. Setup Required RAG Service
 
-- Natural language → SQL query generation
-- No prior knowledge of database schema required
+You **must** set up and run the RAG (Retrieval-Augmented Generation) service, which manages all connections to your databases.
+
+- Download and configure the [RagDbService project](https://github.com/Ilaykosovich/RagDbService) according to its instructions.
+- Ensure RagDbService is running and properly connected to your database(s) before using the SQL Copilot.
+
+---
+
+## Key Features
+
+- Conversational interface: natural language to SQL
+- **No need** to manually describe database schema
 - Dynamic schema introspection (tables, columns, relations)
-- Iterative SQL refinement based on execution errors
-- Optional SQL transparency (generated SQL can be shown to the user)
-- Session-based conversational context
-- Observability via Prometheus & Grafana
-- Supports both local and cloud-based LLMs
+- Iterative SQL refinement (error-driven)
+- (Optional) Show generated SQL to user (transparency)
+- Session-based chat flow
+- Observability: Prometheus + Grafana
+- Supports both local and cloud-based LLMs (OpenAI, Ollama, etc.)
 
 ---
 
-## Architecture Overview
+## Architecture
+
+- **Backend:** FastAPI (chat session, orchestration, SQL execution)
+- **Frontend:** Minimal single-page web client
+- **LLM Runtime:** OpenAI or local (Ollama, etc)
+- **Observability:** Prometheus, Grafana
+
+> *For a step-by-step architectural walkthrough, see the [Medium article](https://medium.com/@ilaykosovich/text-to-sql-designing-an-adaptive-ai-agent-part-2-0a364e7cc550).*
 
 <p align="center">
   <img src="images/Adaptive-Memory-AugmentedDB.drawio.svg" width="900" />
@@ -62,58 +74,23 @@ the LLM does not rely on manually provided schema descriptions. Instead, the sys
   <img src="images/generated_sql.png" width="900" />
 </p>
 
-The system follows a **multi-stage orchestration pipeline** designed to minimize prompt size, reduce hallucinations, and improve SQL correctness.
+---
 
-### 1. User query ingestion
-The user submits a natural language request describing the data they want to retrieve.
+## LLM Configuration
 
-### 2. Semantic analysis & intent extraction
-The LLM performs semantic analysis of the user query and generates a **structured JSON specification** describing:
-- entities of interest
-- filters and conditions
-- aggregations
-- expected output format
-
-This step is intentionally decoupled from SQL generation.
-
-### 3. Dynamic schema introspection
-In parallel, the system queries the database to retrieve **schema metadata**, including:
-- table names
-- column definitions
-- relationships and foreign keys
-- optional comments and constraints
-
-This ensures the LLM always operates on **up-to-date schema information**.
-
-### 4. Schema-aware data pruning
-The JSON specification and schema metadata are provided to the LLM, which prunes irrelevant tables and columns.
-
-The result is a **minimal, task-specific schema context**, significantly reducing token usage and cognitive load for the model.
-
-### 5. SQL generation
-Using the pruned schema, the LLM generates a SQL query tailored to the user’s intent.
-
-### 6. Execution & error-driven refinement
-The generated SQL is executed against the database.
-
-- If execution succeeds, the result is returned to the user.
-- If an execution error occurs, the error message is appended to the prompt and the LLM retries SQL generation.
-
-This feedback loop continues until the query succeeds or a retry limit is reached.
+Configure in `.env` to use either **OpenAI** or local models (Ollama, etc.)
 
 ---
 
-## Project components
+## Status
 
-- **Backend:** FastAPI (session-based chat, orchestration, SQL execution)
-- **Frontend:** Simple single-page web client
-- **LLM runtime:** OpenAI API or local models via Ollama
-- **Observability:** Prometheus (metrics), Grafana (dashboards)
+🚧 **Work in progress**
 
 ---
 
-## LLM configuration
+## License
 
-The project supports both **OpenAI** and **local LLMs**.
+Your license info here
 
+---
 

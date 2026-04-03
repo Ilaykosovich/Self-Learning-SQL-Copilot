@@ -102,44 +102,56 @@
 
     addMsg("user", text);
     inputEl.value = "";
+    sendBtn.disabled = true;
 
-    const mode = modeEl.value;
-
-    // ВАЖНО:
-    // - фронт НЕ передает model/temperature
-    // - backend использует settings.DEFAULT_LLM_MODEL и settings.DEFAULT_TEMPERATURE
     const payload = {
       session_id: sessionId,
       messages: [...messages, { role: "user", content: text }]
     };
 
-    sendBtn.disabled = true;
+    // Create AI bubble for streaming
+    const aiDiv = document.createElement("div");
+    aiDiv.className = "msg ai";
+    aiDiv.textContent = "";
+    msgsEl.appendChild(aiDiv);
+    msgsEl.scrollTop = msgsEl.scrollHeight;
 
     try {
-      const res = await fetch(mode, {
+      const res = await fetch("/chat/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
 
-      const data = await res.json();
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let finalAnswer = "";
 
-      let output;
-      let isMono = false;
-
-      if (mode === "/query_analyze") {
-        output = JSON.stringify(data.analysis, null, 2);
-        isMono = true;
-      } else {
-        output = data.answer ?? "";
-        // сохраняем историю только для чата
-        messages.push({ role: "user", content: text });
-        messages.push({ role: "assistant", content: output });
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const evt = JSON.parse(line.slice(6));
+          if (evt.token) {
+            aiDiv.textContent += evt.token;
+            msgsEl.scrollTop = msgsEl.scrollHeight;
+          } else if (evt.done) {
+            finalAnswer = evt.answer || aiDiv.textContent;
+            sessionId = evt.session_id || sessionId;
+            messages.push({ role: "user", content: text });
+            messages.push({ role: "assistant", content: finalAnswer });
+          } else if (evt.error) {
+            aiDiv.textContent = "❌ Error: " + evt.error;
+          }
+        }
       }
-
-      addMsg("ai", output, isMono);
     } catch (e) {
-      addMsg("ai", "❌ Error: " + (e?.message || String(e)), true);
+      aiDiv.textContent = "❌ Error: " + (e?.message || String(e));
     } finally {
       sendBtn.disabled = false;
     }

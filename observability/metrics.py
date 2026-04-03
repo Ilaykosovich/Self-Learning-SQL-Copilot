@@ -32,6 +32,13 @@ LLM_ERRORS_TOTAL = Counter(
     registry=REGISTRY,
 )
 
+LLM_TTFT = Histogram(
+    "orchestrator_llm_ttft_seconds",
+    "Time to first token from LLM (seconds)",
+    ["model"],
+    registry=REGISTRY,
+)
+
 INFLIGHT = Gauge(
     "orchestrator_inflight_requests",
     "Number of in-flight requests",
